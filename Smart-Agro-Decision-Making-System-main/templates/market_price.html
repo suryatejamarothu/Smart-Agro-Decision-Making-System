@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">Market Price Prediction</h3>
+            </div>
+            <div class="card-body">
+                <p class="lead">Enter your crop and harvest details to check the expected market price in your area.</p>
+                
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                
+                <form method="POST" action="{{ url_for('market_price') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="crop" class="form-label">Crop Name *</label>
+                                <input type="text" class="form-control" id="crop" name="crop" required 
+                                       value="{{ request.form.crop if request.form.crop }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="variety" class="form-label">Variety/Grade</label>
+                                <input type="text" class="form-control" id="variety" name="variety"
+                                       value="{{ request.form.variety if request.form.variety }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="quantity" class="form-label">Quantity *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="quantity" name="quantity" required
+                                           value="{{ request.form.quantity if request.form.quantity }}" min="1">
+                                    <select class="form-select" style="max-width: 120px;" name="quantity_unit">
+                                        <option value="kg">kg</option>
+                                        <option value="quintal">Quintal</option>
+                                        <option value="ton">Ton</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="harvest_date" class="form-label">Expected Harvest Date *</label>
+                                <input type="date" class="form-control" id="harvest_date" name="harvest_date" required
+                                       value="{{ request.form.harvest_date if request.form.harvest_date }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="state" class="form-label">State *</label>
+                                <select class="form-select" id="state" name="state" required>
+                                    <option value="" disabled selected>Select State</option>
+                                    <option value="Andhra Pradesh">Andhra Pradesh</option>
+                                    <option value="Karnataka">Karnataka</option>
+                                    <option value="Kerala">Kerala</option>
+                                    <option value="Tamil Nadu">Tamil Nadu</option>
+                                    <option value="Telangana">Telangana</option>
+                                    <option value="Maharashtra">Maharashtra</option>
+                                    <option value="Gujarat">Gujarat</option>
+                                    <option value="Punjab">Punjab</option>
+                                    <option value="Haryana">Haryana</option>
+                                    <option value="Uttar Pradesh">Uttar Pradesh</option>
+                                    <option value="Madhya Pradesh">Madhya Pradesh</option>
+                                    <option value="Rajasthan">Rajasthan</option>
+                                    <option value="West Bengal">West Bengal</option>
+                                    <option value="Bihar">Bihar</option>
+                                    <option value="Odisha">Odisha</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="district" class="form-label">District *</label>
+                                <input type="text" class="form-control" id="district" name="district" required
+                                       value="{{ request.form.district if request.form.district }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-graph-up"></i> Get Price Prediction
+                        </button>
+                    </div>
+                </form>
+                
+                {% if result %}
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h4 class="text-success">Price Prediction Results</h4>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="card bg-white mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Predicted Price Range</h5>
+                                    <p class="display-6 text-success">{{ result.predicted_price }}</p>
+                                    <p class="text-muted">Based on current market trends and historical data</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Nearest Market</h5>
+                                    <p class="h5">{{ result.nearest_mandi }}</p>
+                                    <p class="text-muted">Last updated: {{ now.strftime('%d %b %Y') }}</p>
+                                    <a href="#" class="btn btn-outline-success btn-sm">View Market Details</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>Note:</strong> These are predicted prices based on current market conditions. 
+                        Actual prices may vary based on quality, demand, and other factors at the time of sale.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Market Trends - Last 6 Months</h5>
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="priceTrendChart"></canvas>
+                </div>
+                <p class="text-muted small mt-2">
+                    <i class="bi bi-info-circle"></i> 
+                    The chart shows the price trend for {{ result.crop if result and result.crop else 'selected crop' }} in {{ result.district if result and result.district else 'your area' }}.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set minimum date to today for harvest date
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        const harvestDateInput = document.getElementById('harvest_date');
+        
+        if (harvestDateInput) {
+            harvestDateInput.min = today;
+            
+            // Set default date to 30 days from now if not already set
+            if (!harvestDateInput.value) {
+                const futureDate = new Date();
+                futureDate.setDate(futureDate.getDate() + 30);
+                harvestDateInput.valueAsDate = futureDate;
+            }
+        }
+        
+        // Initialize chart
+        initPriceTrendChart();
+    });
+    
+    function initPriceTrendChart() {
+        const ctx = document.getElementById('priceTrendChart').getContext('2d');
+        
+        // Check if we have chart data from the server
+        const chartData = {{ chart_data|tojson|safe if chart_data else 'null' }};
+        
+        let months = [];
+        let prices = [];
+        let priceChange = 0;
+        
+        if (chartData) {
+            // Use data from backend
+            months = chartData.labels;
+            prices = chartData.prices;
+            priceChange = chartData.price_change;
+        } else {
+            // Fallback to mock data
+            const today = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const date = new Date();
+                date.setMonth(today.getMonth() - i);
+                months.push(date.toLocaleString('default', { month: 'short' }));
+                prices.push(Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000);
+            }
+        }
+        
+        // Determine chart color based on price change
+        const chartColor = priceChange >= 0 ? '#198754' : '#dc3545';
+        
+        // Create chart
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Price per Quintal (₹)',
+                    data: prices,
+                    borderColor: chartColor,
+                    backgroundColor: chartColor.replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: chartColor,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '₹' + context.parsed.y.toLocaleString('en-IN');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString('en-IN');
+                            }
+                        },
+                        grid: {
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Update the price change indicator if available
+        if (chartData) {
+            const changeElement = document.getElementById('priceChangeIndicator');
+            if (changeElement) {
+                changeElement.textContent = `${Math.abs(priceChange)}% ${priceChange >= 0 ? '↑' : '↓'}`;
+                changeElement.className = `badge ${priceChange >= 0 ? 'bg-success' : 'bg-danger'}`;
+            }
+        }
+    }
+</script>
+{% endblock %}
